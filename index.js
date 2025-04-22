@@ -1,139 +1,158 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.querySelector('form');
-    const addButton = document.querySelector('.add-button');
+// index.js
+const addButton = document.querySelector('.add-button');
+const submitButton = document.querySelector('.submit-button');
+const form = document.querySelector('form');
+let beverageCount = 1;
 
-    const modal = document.getElementById('modal-overlay');
-    const modalClose = document.querySelector('.modal-close');
+function updateBeverageNumbers() {
+    document.querySelectorAll('.beverage').forEach((fieldset, index) => {
+        fieldset.querySelector('.beverage-count').textContent = `Напиток №${index + 1}`;
+    });
+}
 
-    // Функция добавления крестика и обработки его клика
-    function addRemoveButton(beverage) {
-        let removeBtn = document.createElement('button');
-        removeBtn.textContent = '✖';
-        removeBtn.type = 'button';
-        removeBtn.className = 'remove-button';
-        removeBtn.style.cssText = `
-            float: right;
-            background: none;
-            border: none;
-            font-size: 16px;
-            cursor: pointer;
-            color: red;
-        `;
-        beverage.querySelector('.beverage-count').appendChild(removeBtn);
+function highlightUrgent(text) {
+    const keywords = [/срочно/gi, /быстрее|побыстрее/gi, /скорее|поскорее/gi, /очень нужно/gi];
+    return keywords.reduce((acc, regex) => acc.replace(regex, match => `<b>${match}</b>`), text);
+}
 
-        removeBtn.addEventListener('click', () => {
-            const beverages = form.querySelectorAll('.beverage');
-            if (beverages.length > 1) {
-                beverage.remove();
-                updateBeverageTitles();
-            }
-        });
-    }
+function createBeverageElement() {
+    const template = document.querySelector('.beverage');
+    const newBeverage = template.cloneNode(true);
+    beverageCount++;
 
-    // Обновление нумерации напитков
-    function updateBeverageTitles() {
-        const beverages = form.querySelectorAll('.beverage');
-        beverages.forEach((bev, index) => {
-            const title = bev.querySelector('.beverage-count');
-            title.childNodes[0].textContent = `Напиток №${index + 1}`;
-            const radios = bev.querySelectorAll('input[type="radio"]');
-            radios.forEach((radio) => {
-                radio.name = `milk${index + 1}`;
-            });
-        });
-    }
-
-    // Добавить крестик к уже существующему напитку
-    const initialBeverage = form.querySelector('.beverage');
-    addRemoveButton(initialBeverage);
-
-    addButton.addEventListener('click', () => {
-        const beverages = form.querySelectorAll('.beverage');
-        const lastBeverage = beverages[beverages.length - 1];
-        const newBeverage = lastBeverage.cloneNode(true);
-
-        // Удалить старый крестик, если есть
-        const oldRemove = newBeverage.querySelector('.remove-button');
-        if (oldRemove) oldRemove.remove();
-
-        addRemoveButton(newBeverage);
-
-        form.insertBefore(newBeverage, addButton.closest('div'));
-        updateBeverageTitles();
+    // Обновляем group name для радио-кнопок
+    newBeverage.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.name = `milk-${beverageCount}`;
     });
 
-    function getWordForm(n, forms) {
-        const mod10 = n % 10;
-        const mod100 = n % 100;
-
-        if (mod10 === 1 && mod100 !== 11) return forms[0];     // 1 напиток
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return forms[1]; // 2-4 напитка
-        return forms[2]; // 5+ напитков
-    }
-
-    // Открытие модального окна по кнопке "Готово"
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        const beverages = form.querySelectorAll('.beverage');
-        const count = beverages.length;
-        const wordForm = getWordForm(count, ['напиток', 'напитка', 'напитков']);
-
-        let tableRows = '';
-        beverages.forEach((bev) => {
-            const drink = bev.querySelector('select').selectedOptions[0].textContent;
-            const milk = bev.querySelector('input[type="radio"]:checked').nextElementSibling.textContent;
-            const additions = [...bev.querySelectorAll('input[type="checkbox"]:checked')]
-                .map(cb => cb.nextElementSibling.textContent)
-                .join(', ');
-
-            tableRows += `
-            <tr>
-              <td>${drink}</td>
-              <td>${milk}</td>
-              <td>${additions || ''}</td>
-            </tr>
-        `;
-        });
-
-        const modalContent = document.getElementById('modal-content');
-        modalContent.innerHTML = `
-        <p>Вы заказали ${count} ${wordForm}.</p>
-        <table class="order-table">
-          <thead>
-            <tr>
-              <th>Напиток</th>
-              <th>Молоко</th>
-              <th>Дополнительно</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRows}
-          </tbody>
-        </table>
-    `;
-
-        modal.classList.remove('hidden');
-    });
-
-
-
-    // Закрытие модального окна
-    modalClose.addEventListener('click', () => {
-        modal.classList.add('hidden');
-    });
-
-    // Закрытие по клику вне окна
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.add('hidden');
+    // Кнопка удаления
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '✖';
+    closeButton.className = 'remove-button';
+    closeButton.onclick = () => {
+        if (document.querySelectorAll('.beverage').length > 1) {
+            newBeverage.remove();
+            updateBeverageNumbers();
         }
+    };
+
+    // Поле заметок для новых напитков
+    const noteLabel = document.createElement('label');
+    noteLabel.textContent = 'И еще вот что:';
+    noteLabel.className = 'note-label';
+    const textarea = document.createElement('textarea');
+    textarea.rows = 3;
+    textarea.className = 'note-textarea';
+    const notePreview = document.createElement('div');
+    notePreview.className = 'note-preview';
+    notePreview.innerHTML = '&nbsp;';
+    textarea.addEventListener('input', () => {
+        notePreview.innerHTML = highlightUrgent(textarea.value) || '&nbsp;';
+    });
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'field note-field';
+    fieldDiv.append(noteLabel, textarea, notePreview);
+
+    newBeverage.prepend(closeButton);
+    newBeverage.append(fieldDiv);
+    form.insertBefore(newBeverage, addButton.parentElement);
+    updateBeverageNumbers();
+}
+addButton.addEventListener('click', createBeverageElement);
+
+function getMilkText(value) {
+    switch(value) {
+        case 'usual': return 'обычное';
+        case 'no-fat': return 'обезжиренное';
+        case 'soy': return 'соевое';
+        case 'coconut': return 'кокосовое';
+        default: return '';
+    }
+}
+
+function declOfNum(n, text_forms) {
+    n = Math.abs(n) % 100;
+    const n1 = n % 10;
+    if (n > 10 && n < 20) return text_forms[2];
+    if (n1 > 1 && n1 < 5) return text_forms[1];
+    if (n1 == 1) return text_forms[0];
+    return text_forms[2];
+}
+
+function createModal(orderInfo) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-window';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✖';
+    closeBtn.className = 'modal-close';
+    closeBtn.onclick = () => overlay.remove();
+
+    const countText = `Вы заказали ${orderInfo.length} ${declOfNum(orderInfo.length, ['напиток', 'напитка', 'напитков'])}`;
+    const countElem = document.createElement('p');
+    countElem.textContent = countText;
+
+    const table = document.createElement('table');
+    table.className = 'order-table';  // Исправлено: совпадает с CSS
+
+    const header = document.createElement('tr');
+    ['Напиток', 'Молоко', 'Дополнительно', 'Пожелания'].forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        header.appendChild(th);
+    });
+    table.appendChild(header);
+
+    orderInfo.forEach(order => {
+        const row = document.createElement('tr');
+        [order.beverage, order.milk, order.options.join(', ') || '', order.note].forEach(text => {
+            const td = document.createElement('td');
+            td.innerHTML = highlightUrgent(text);
+            row.appendChild(td);
+        });
+        table.appendChild(row);
     });
 
-    // Закрытие по клавише Esc
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            modal.classList.add('hidden');
+    const timeLabel = document.createElement('label');
+    timeLabel.textContent = 'Выберите время заказа:';
+    const timeInput = document.createElement('input');
+    timeInput.type = 'time';
+    timeInput.className = 'time-input';
+
+    const finalizeButton = document.createElement('button');
+    finalizeButton.textContent = 'Оформить';
+    finalizeButton.className = 'submit-order';
+
+    finalizeButton.onclick = () => {
+        const selectedTime = timeInput.value;
+        const now = new Date();
+        const [h, m] = selectedTime.split(':').map(Number);
+        const selected = new Date(now);
+        selected.setHours(h, m, 0, 0);
+        if (selected < now) {
+            timeInput.classList.add('invalid-time');
+            alert('Мы не умеем перемещаться во времени. Выберите время позже, чем текущее');
+        } else {
+            overlay.remove();
         }
-    });
+    };
+
+    modal.append(closeBtn, countElem, table, timeLabel, timeInput, finalizeButton);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+}
+
+submitButton.addEventListener('click', e => {
+    e.preventDefault();
+    const beverages = document.querySelectorAll('.beverage');
+    const orders = Array.from(beverages).map(bev => ({
+        beverage: bev.querySelector('select').value,
+        milk: getMilkText(bev.querySelector('input[type="radio"]:checked').value),
+        options: Array.from(bev.querySelectorAll('input[type="checkbox"]:checked')).map(opt => opt.nextElementSibling.textContent.trim()),
+        note: bev.querySelector('textarea')?.value || ''
+    }));
+    createModal(orders);
 });

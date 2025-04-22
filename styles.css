@@ -101,3 +101,7 @@
     background-color: #f9f9f9;
     font-weight: bold;
 }
+
+.invalid-time {
+    border: 2px solid red;
+}
