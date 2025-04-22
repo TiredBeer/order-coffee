@@ -62,11 +62,61 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBeverageTitles();
     });
 
+    function getWordForm(n, forms) {
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+
+        if (mod10 === 1 && mod100 !== 11) return forms[0];     // 1 напиток
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return forms[1]; // 2-4 напитка
+        return forms[2]; // 5+ напитков
+    }
+
     // Открытие модального окна по кнопке "Готово"
     form.addEventListener('submit', (e) => {
         e.preventDefault();
+
+        const beverages = form.querySelectorAll('.beverage');
+        const count = beverages.length;
+        const wordForm = getWordForm(count, ['напиток', 'напитка', 'напитков']);
+
+        let tableRows = '';
+        beverages.forEach((bev) => {
+            const drink = bev.querySelector('select').selectedOptions[0].textContent;
+            const milk = bev.querySelector('input[type="radio"]:checked').nextElementSibling.textContent;
+            const additions = [...bev.querySelectorAll('input[type="checkbox"]:checked')]
+                .map(cb => cb.nextElementSibling.textContent)
+                .join(', ');
+
+            tableRows += `
+            <tr>
+              <td>${drink}</td>
+              <td>${milk}</td>
+              <td>${additions || ''}</td>
+            </tr>
+        `;
+        });
+
+        const modalContent = document.getElementById('modal-content');
+        modalContent.innerHTML = `
+        <p>Вы заказали ${count} ${wordForm}.</p>
+        <table class="order-table">
+          <thead>
+            <tr>
+              <th>Напиток</th>
+              <th>Молоко</th>
+              <th>Дополнительно</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+    `;
+
         modal.classList.remove('hidden');
     });
+
+
 
     // Закрытие модального окна
     modalClose.addEventListener('click', () => {
